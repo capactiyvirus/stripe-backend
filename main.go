@@ -3,14 +3,15 @@ package main
 import (
 	"log"
 	"net/http"
-
+	"github.com/capactiyvirus/stripe-backend/config"
+    "github.com/capactiyvirus/stripe-backend/routes"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/stripe/stripe-go/v82"
 	
-	"github.com/yourusername/stripe-api/config"
-	"github.com/yourusername/stripe-api/routes"
+	
+
 )
 
 func main() {
