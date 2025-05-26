@@ -1,7 +1,7 @@
-gopackage handlers
+package handlers
 
 import (
-	"github.com/yourusername/stripe-api/config"
+	"github.com/capactiyvirus/stripe-backend/config"
 )
 
 // Handlers holds all HTTP handlers and their dependencies
