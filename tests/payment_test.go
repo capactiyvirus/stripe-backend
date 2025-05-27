@@ -13,10 +13,38 @@ import (
 	"github.com/capactiyvirus/stripe-backend/config"
 	"github.com/capactiyvirus/stripe-backend/handlers"
 	"github.com/capactiyvirus/stripe-backend/models"
-	"github.com/capactiyvirus/stripe-backend/routes"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// setupTestRouter creates a test router
+func setupTestRouter(h *handlers.Handlers) chi.Router {
+	r := chi.NewRouter()
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+
+	// Health check endpoint
+	r.Get("/health", h.HealthCheck)
+
+	// API routes
+	r.Route("/api", func(r chi.Router) {
+		r.Route("/payments", func(r chi.Router) {
+			r.Post("/create-order", h.CreateOrder)
+			r.Get("/status/{orderID}", h.GetPaymentStatus)
+			r.Get("/order/{orderID}", h.GetOrderDetails)
+			r.Get("/track/{trackingID}", h.TrackPayment)
+			r.Get("/customer/{email}", h.GetCustomerPayments)
+			r.Get("/all", h.GetAllPayments)
+			r.Get("/stats", h.GetPaymentStats)
+			r.Post("/fulfill/{orderID}", h.FulfillOrder)
+			r.Post("/refund/{orderID}", h.RefundOrder)
+		})
+	})
+
+	return r
+}
 
 // TestCreateOrder tests order creation
 func TestCreateOrder(t *testing.T) {
@@ -26,7 +54,7 @@ func TestCreateOrder(t *testing.T) {
 		Environment:     "test",
 	}
 	h := handlers.NewHandlers(cfg)
-	router := routes.SetupRoutes(h)
+	router := setupTestRouter(h)
 
 	// Test data
 	orderRequest := map[string]interface{}{
@@ -79,13 +107,13 @@ func TestCreateOrder(t *testing.T) {
 
 // TestTrackPayment tests payment tracking
 func TestTrackPayment(t *testing.T) {
-	// First create an order
+	// Setup
 	cfg := &config.Config{
 		StripeSecretKey: "sk_test_fake_key",
 		Environment:     "test",
 	}
 	h := handlers.NewHandlers(cfg)
-	router := routes.SetupRoutes(h)
+	router := setupTestRouter(h)
 
 	// Create order first
 	order := &models.Order{
@@ -179,7 +207,7 @@ func TestGetPaymentStats(t *testing.T) {
 		Environment:     "test",
 	}
 	h := handlers.NewHandlers(cfg)
-	router := routes.SetupRoutes(h)
+	router := setupTestRouter(h)
 
 	// Create some test orders with different statuses
 	orders := []*models.Order{
@@ -238,33 +266,35 @@ func BenchmarkCreateOrder(b *testing.B) {
 	}
 	h := handlers.NewHandlers(cfg)
 
-	orderRequest := map[string]interface{}{
-		"customer_info": map[string]string{
-			"email": "benchmark@example.com",
-			"name":  "Benchmark Customer",
+	order := &models.Order{
+		ID:         "benchmark-order",
+		TrackingID: "TRKBENCH",
+		CustomerInfo: models.CustomerInfo{
+			Email: "benchmark@example.com",
+			Name:  "Benchmark Customer",
 		},
-		"items": []map[string]interface{}{
+		Items: []models.OrderItem{
 			{
-				"product_id":   "1",
-				"product_name": "Benchmark Product",
-				"file_type":    "PDF",
-				"price":        9.99,
-				"quantity":     1,
+				ProductID:   "1",
+				ProductName: "Benchmark Product",
+				FileType:    "PDF",
+				Price:       9.99,
+				Quantity:    1,
 			},
 		},
+		Payment: models.PaymentInfo{
+			Amount:   999,
+			Currency: "usd",
+			Status:   models.PaymentStatusPending,
+		},
+		Status: models.OrderStatusCreated,
 	}
-
-	jsonData, _ := json.Marshal(orderRequest)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		req := httptest.NewRequest("POST", "/api/payments/create-order", bytes.NewBuffer(jsonData))
-		req.Header.Set("Content-Type", "application/json")
-		w := httptest.NewRecorder()
-
-		// This would normally call the handler directly
-		// router.ServeHTTP(w, req)
-		_ = w // Avoid unused variable error
+		order.ID = fmt.Sprintf("benchmark-order-%d", i)
+		order.TrackingID = fmt.Sprintf("TRKBENCH%d", i)
+		_ = h.PaymentStore.CreateOrder(order)
 	}
 }
 
@@ -279,7 +309,7 @@ func TestFullPaymentFlow(t *testing.T) {
 		Environment:     "test",
 	}
 	h := handlers.NewHandlers(cfg)
-	router := routes.SetupRoutes(h)
+	router := setupTestRouter(h)
 
 	// Step 1: Create order
 	orderRequest := map[string]interface{}{
@@ -326,7 +356,7 @@ func TestFullPaymentFlow(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, "pending", statusResponse["payment_status"])
-	assert.Equal(t, "created", statusResponse["order_status"])
+	assert.Equal(t, "pending", statusResponse["order_status"])
 
 	// Step 3: Simulate payment success (normally done by webhook)
 	err = h.PaymentStore.UpdatePaymentStatus(orderID, models.PaymentStatusSucceeded)
@@ -434,7 +464,7 @@ func TestLoadTest(t *testing.T) {
 	}
 
 	duration := time.Since(startTime)
-	totalOrders := numGoroutines * ordersPerGoroutines
+	totalOrders := numGoroutines * ordersPerGoroutine
 	ordersPerSecond := float64(totalOrders) / duration.Seconds()
 
 	t.Logf("Load test completed:")

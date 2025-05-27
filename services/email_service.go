@@ -8,7 +8,7 @@ import (
 	"net/smtp"
 	"os"
 
-	"github.com/capactiyvirus/stripe-api/models"
+	"github.com/capactiyvirus/stripe-backend/models"
 )
 
 type EmailService struct {

@@ -1,17 +1,14 @@
-// package handlers
+// handlers/handlers.go
+package handlers
 
-// import (
-// 	"github.com/capactiyvirus/stripe-backend/config"
-// )
+import "net/http"
 
-// // Handlers holds all HTTP handlers and their dependencies
-// type Handlers struct {
-// 	config *config.Config
-// }
+// Note: The main Handlers struct is now defined in payment_handlers.go
+// This file can contain shared handler utilities
 
-// // NewHandlers creates a new Handlers instance
-// func NewHandlers(cfg *config.Config) *Handlers {
-// 	return &Handlers{
-// 		config: cfg,
-// 	}
-// }
+// HealthCheck is a simple health check endpoint
+func HealthCheck(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status": "ok"}`))
+}

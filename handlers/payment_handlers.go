@@ -10,11 +10,11 @@ import (
 	"time"
 
 	"github.com/capactiyvirus/stripe-backend/config"
+	"github.com/capactiyvirus/stripe-backend/models"
+	"github.com/capactiyvirus/stripe-backend/store"
 	"github.com/go-chi/chi/v5"
-	"github.com/stripe/stripe-go/v72"
-	"github.com/stripe/stripe-go/v72/paymentintent"
-	"github.com/yourusername/stripe-api/models"
-	"github.com/yourusername/stripe-api/store"
+	"github.com/stripe/stripe-go/v82"
+	"github.com/stripe/stripe-go/v82/paymentintent"
 )
 
 // Enhanced Handlers struct with payment store

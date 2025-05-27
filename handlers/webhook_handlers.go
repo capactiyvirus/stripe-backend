@@ -131,8 +131,8 @@ func (h *Handlers) handlePaymentIntentFailed(event stripe.Event) {
 		Status:    models.PaymentStatusFailed,
 		Data: map[string]interface{}{
 			"payment_intent_id": paymentIntent.ID,
-			"failure_code":      paymentIntent.LastPaymentError.Code,
-			"failure_message":   paymentIntent.LastPaymentError.Message,
+			// "failure_code":      getFailureCode(paymentIntent.LastPaymentError),
+			// "failure_message":   getFailureMessage(paymentIntent.LastPaymentError),
 		},
 	})
 }
@@ -228,8 +228,8 @@ func (h *Handlers) handleCheckoutSessionCompleted(event stripe.Event) {
 		Status:    models.PaymentStatusSucceeded,
 		Data: map[string]interface{}{
 			"session_id":        session.ID,
-			"payment_intent_id": session.PaymentIntent.ID,
-			"customer_email":    session.CustomerDetails.Email,
+			"payment_intent_id": getPaymentIntentID(session.PaymentIntent),
+			"customer_email":    getCustomerEmail(session.CustomerDetails),
 		},
 	})
 }
@@ -327,9 +327,36 @@ func getPaymentMethod(pm *stripe.PaymentMethod) models.PaymentMethod {
 	switch pm.Type {
 	case stripe.PaymentMethodTypeCard:
 		return models.PaymentMethodCard
-	case stripe.PaymentMethodTypePaypal:
-		return models.PaymentMethodPayPal
 	default:
 		return models.PaymentMethodCard
 	}
+}
+
+// Helper functions for safe access to potentially nil fields
+// func getFailureCode(err *stripe.PaymentError) string {
+// 	if err == nil {
+// 		return ""
+// 	}
+// 	return string(err.Code)
+// }
+
+// func getFailureMessage(err *stripe.PaymentError) string {
+// 	if err == nil {
+// 		return ""
+// 	}
+// 	return err.Message
+// }
+
+func getPaymentIntentID(pi *stripe.PaymentIntent) string {
+	if pi == nil {
+		return ""
+	}
+	return pi.ID
+}
+
+func getCustomerEmail(details *stripe.CheckoutSessionCustomerDetails) string {
+	if details == nil {
+		return ""
+	}
+	return details.Email
 }

@@ -85,8 +85,8 @@ func setupRouter(cfg *config.Config, h *handlers.Handlers) chi.Router {
 	// Security headers middleware
 	r.Use(securityMiddleware)
 
-	// Health check endpoint
-	r.Get("/health", handlers.HealthCheck)
+	// Health check endpoint - Fixed to use handler method
+	r.Get("/health", h.HealthCheck)
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
