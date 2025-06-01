@@ -25,7 +25,7 @@ func (h *Handlers) HandleStripeWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify webhook signature
-	endpointSecret := h.config.StripeWebhookSecret
+	endpointSecret := h.Config.StripeWebhookSecret
 	event, err := webhook.ConstructEvent(payload, r.Header.Get("Stripe-Signature"), endpointSecret)
 	if err != nil {
 		log.Printf("Webhook signature verification failed: %v", err)
@@ -73,19 +73,19 @@ func (h *Handlers) handlePaymentIntentSucceeded(event stripe.Event) {
 	}
 
 	// Update payment status
-	if err := h.paymentStore.UpdatePaymentStatus(orderID, models.PaymentStatusSucceeded); err != nil {
+	if err := h.PaymentStore.UpdatePaymentStatus(orderID, models.PaymentStatusSucceeded); err != nil {
 		log.Printf("Failed to update payment status for order %s: %v", orderID, err)
 		return
 	}
 
 	// Update order status to paid
-	if err := h.paymentStore.UpdateOrderStatus(orderID, models.OrderStatusPaid); err != nil {
+	if err := h.PaymentStore.UpdateOrderStatus(orderID, models.OrderStatusPaid); err != nil {
 		log.Printf("Failed to update order status for order %s: %v", orderID, err)
 		return
 	}
 
 	// Log payment event
-	h.paymentStore.AddPaymentEvent(models.PaymentEvent{
+	h.PaymentStore.AddPaymentEvent(models.PaymentEvent{
 		OrderID:   orderID,
 		EventType: "payment_succeeded",
 		Status:    models.PaymentStatusSucceeded,
@@ -119,13 +119,13 @@ func (h *Handlers) handlePaymentIntentFailed(event stripe.Event) {
 	}
 
 	// Update payment status
-	if err := h.paymentStore.UpdatePaymentStatus(orderID, models.PaymentStatusFailed); err != nil {
+	if err := h.PaymentStore.UpdatePaymentStatus(orderID, models.PaymentStatusFailed); err != nil {
 		log.Printf("Failed to update payment status for order %s: %v", orderID, err)
 		return
 	}
 
 	// Log payment event
-	h.paymentStore.AddPaymentEvent(models.PaymentEvent{
+	h.PaymentStore.AddPaymentEvent(models.PaymentEvent{
 		OrderID:   orderID,
 		EventType: "payment_failed",
 		Status:    models.PaymentStatusFailed,
@@ -155,11 +155,11 @@ func (h *Handlers) handlePaymentIntentCanceled(event stripe.Event) {
 	}
 
 	// Update statuses
-	h.paymentStore.UpdatePaymentStatus(orderID, models.PaymentStatusCanceled)
-	h.paymentStore.UpdateOrderStatus(orderID, models.OrderStatusCanceled)
+	h.PaymentStore.UpdatePaymentStatus(orderID, models.PaymentStatusCanceled)
+	h.PaymentStore.UpdateOrderStatus(orderID, models.OrderStatusCanceled)
 
 	// Log payment event
-	h.paymentStore.AddPaymentEvent(models.PaymentEvent{
+	h.PaymentStore.AddPaymentEvent(models.PaymentEvent{
 		OrderID:   orderID,
 		EventType: "payment_canceled",
 		Status:    models.PaymentStatusCanceled,
@@ -193,7 +193,7 @@ func (h *Handlers) handleCheckoutSessionCompleted(event stripe.Event) {
 	}
 
 	// Update order with session information
-	order, err := h.paymentStore.GetOrder(orderID)
+	order, err := h.PaymentStore.GetOrder(orderID)
 	if err != nil {
 		log.Printf("Failed to get order %s: %v", orderID, err)
 		return
@@ -216,13 +216,13 @@ func (h *Handlers) handleCheckoutSessionCompleted(event stripe.Event) {
 	}
 	order.Payment.StripeSessionID = session.ID
 
-	if err := h.paymentStore.UpdateOrder(order); err != nil {
+	if err := h.PaymentStore.UpdateOrder(order); err != nil {
 		log.Printf("Failed to update order %s: %v", orderID, err)
 		return
 	}
 
 	// Log checkout event
-	h.paymentStore.AddPaymentEvent(models.PaymentEvent{
+	h.PaymentStore.AddPaymentEvent(models.PaymentEvent{
 		OrderID:   orderID,
 		EventType: "checkout_completed",
 		Status:    models.PaymentStatusSucceeded,
@@ -279,13 +279,13 @@ func (h *Handlers) findOrderByPaymentIntentID(paymentIntentID string) string {
 	// For now, we'll iterate through orders (this should be optimized with proper indexing)
 
 	// Get all orders and search (this is inefficient but works for the demo)
-	orders, err := h.paymentStore.GetAllOrders(1000, 0) // Get a large batch
+	orders, err := h.PaymentStore.GetAllOrders(1000, 0) // Get a large batch
 	if err != nil {
 		return ""
 	}
 
 	for _, summary := range orders {
-		order, err := h.paymentStore.GetOrder(summary.ID)
+		order, err := h.PaymentStore.GetOrder(summary.ID)
 		if err != nil {
 			continue
 		}
@@ -300,13 +300,13 @@ func (h *Handlers) findOrderByPaymentIntentID(paymentIntentID string) string {
 // findOrderBySessionID finds an order by Stripe checkout session ID
 func (h *Handlers) findOrderBySessionID(sessionID string) string {
 	// Similar to findOrderByPaymentIntentID but searches by session ID
-	orders, err := h.paymentStore.GetAllOrders(1000, 0)
+	orders, err := h.PaymentStore.GetAllOrders(1000, 0)
 	if err != nil {
 		return ""
 	}
 
 	for _, summary := range orders {
-		order, err := h.paymentStore.GetOrder(summary.ID)
+		order, err := h.PaymentStore.GetOrder(summary.ID)
 		if err != nil {
 			continue
 		}

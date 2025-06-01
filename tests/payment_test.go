@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
+	//"github.com/capactiyvirus/stripe-backend/"
 	"github.com/capactiyvirus/stripe-backend/config"
 	"github.com/capactiyvirus/stripe-backend/handlers"
 	"github.com/capactiyvirus/stripe-backend/models"
@@ -49,8 +51,13 @@ func setupTestRouter(h *handlers.Handlers) chi.Router {
 // TestCreateOrder tests order creation
 func TestCreateOrder(t *testing.T) {
 	// Setup test server
+	testKey := os.Getenv("STRIPE_SECRET_KEY")
+	if testKey == "" {
+		t.Skip("STRIPE_SECRET_KEY not set")
+	}
+
 	cfg := &config.Config{
-		StripeSecretKey: "sk_test_fake_key",
+		StripeSecretKey: "STRIPE_SECRET_KEY",
 		Environment:     "test",
 	}
 	h := handlers.NewHandlers(cfg)
@@ -75,7 +82,7 @@ func TestCreateOrder(t *testing.T) {
 			"source": "test",
 		},
 	}
-
+	fmt.Printf("Stripe @@@@@@@@@@@@@@@@@@@@@@@@@@@@@ %s \n", testKey)
 	// Convert to JSON
 	jsonData, err := json.Marshal(orderRequest)
 	require.NoError(t, err)
@@ -107,9 +114,14 @@ func TestCreateOrder(t *testing.T) {
 
 // TestTrackPayment tests payment tracking
 func TestTrackPayment(t *testing.T) {
+
+	testKey := os.Getenv("STRIPE_SECRET_KEY")
+	if testKey == "" {
+		t.Skip("STRIPE_SECRET_KEY not set")
+	}
 	// Setup
 	cfg := &config.Config{
-		StripeSecretKey: "sk_test_fake_key",
+		StripeSecretKey: testKey,
 		Environment:     "test",
 	}
 	h := handlers.NewHandlers(cfg)
@@ -164,8 +176,12 @@ func TestTrackPayment(t *testing.T) {
 
 // TestPaymentStatusUpdate tests payment status updates
 func TestPaymentStatusUpdate(t *testing.T) {
+	testKey := os.Getenv("STRIPE_SECRET_KEY")
+	if testKey == "" {
+		t.Skip("STRIPE_SECRET_KEY not set")
+	}
 	cfg := &config.Config{
-		StripeSecretKey: "sk_test_fake_key",
+		StripeSecretKey: testKey,
 		Environment:     "test",
 	}
 	h := handlers.NewHandlers(cfg)
@@ -202,8 +218,12 @@ func TestPaymentStatusUpdate(t *testing.T) {
 
 // TestGetPaymentStats tests payment statistics
 func TestGetPaymentStats(t *testing.T) {
+	testKey := os.Getenv("STRIPE_SECRET_KEY")
+	if testKey == "" {
+		t.Skip("STRIPE_SECRET_KEY not set")
+	}
 	cfg := &config.Config{
-		StripeSecretKey: "sk_test_fake_key",
+		StripeSecretKey: testKey,
 		Environment:     "test",
 	}
 	h := handlers.NewHandlers(cfg)
@@ -260,8 +280,12 @@ func TestGetPaymentStats(t *testing.T) {
 
 // BenchmarkCreateOrder benchmarks order creation performance
 func BenchmarkCreateOrder(b *testing.B) {
+	testKey := os.Getenv("STRIPE_SECRET_KEY")
+	if testKey == "" {
+		b.Skip("STRIPE_SECRET_KEY not set")
+	}
 	cfg := &config.Config{
-		StripeSecretKey: "sk_test_fake_key",
+		StripeSecretKey: testKey,
 		Environment:     "test",
 	}
 	h := handlers.NewHandlers(cfg)
@@ -300,12 +324,16 @@ func BenchmarkCreateOrder(b *testing.B) {
 
 // Integration test for full payment flow
 func TestFullPaymentFlow(t *testing.T) {
+	testKey := os.Getenv("STRIPE_SECRET_KEY")
+	if testKey == "" {
+		t.Skip("STRIPE_SECRET_KEY not set")
+	}
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 
 	cfg := &config.Config{
-		StripeSecretKey: "sk_test_fake_key",
+		StripeSecretKey: testKey,
 		Environment:     "test",
 	}
 	h := handlers.NewHandlers(cfg)
@@ -413,12 +441,16 @@ func TestFullPaymentFlow(t *testing.T) {
 
 // Load test helper
 func TestLoadTest(t *testing.T) {
+	testKey := os.Getenv("STRIPE_SECRET_KEY")
+	if testKey == "" {
+		t.Skip("STRIPE_SECRET_KEY not set")
+	}
 	if testing.Short() {
 		t.Skip("Skipping load test in short mode")
 	}
 
 	cfg := &config.Config{
-		StripeSecretKey: "sk_test_fake_key",
+		StripeSecretKey: testKey,
 		Environment:     "test",
 	}
 	h := handlers.NewHandlers(cfg)

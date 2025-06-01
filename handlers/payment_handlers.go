@@ -19,15 +19,15 @@ import (
 
 // Enhanced Handlers struct with payment store
 type Handlers struct {
-	config       *config.Config
-	paymentStore *store.PaymentStore
+	Config       *config.Config
+	PaymentStore *store.PaymentStore
 }
 
 // NewHandlers creates a new Handlers instance with payment store
 func NewHandlers(cfg *config.Config) *Handlers {
 	return &Handlers{
-		config:       cfg,
-		paymentStore: store.NewPaymentStore(),
+		Config:       cfg,
+		PaymentStore: store.NewPaymentStore(),
 	}
 }
 
@@ -119,7 +119,7 @@ func (h *Handlers) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Store the order
-	if err := h.paymentStore.CreateOrder(order); err != nil {
+	if err := h.PaymentStore.CreateOrder(order); err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to create order: "+err.Error())
 		return
 	}
@@ -144,13 +144,13 @@ func (h *Handlers) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	// Update order with payment intent ID
 	order.Payment.StripePaymentIntentID = pi.ID
 	order.Status = models.OrderStatusPending
-	if err := h.paymentStore.UpdateOrder(order); err != nil {
+	if err := h.PaymentStore.UpdateOrder(order); err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to update order: "+err.Error())
 		return
 	}
 
 	// Log payment event
-	h.paymentStore.AddPaymentEvent(models.PaymentEvent{
+	h.PaymentStore.AddPaymentEvent(models.PaymentEvent{
 		OrderID:   order.ID,
 		EventType: "order_created",
 		Status:    models.PaymentStatusPending,
@@ -173,7 +173,7 @@ func (h *Handlers) GetPaymentStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	order, err := h.paymentStore.GetOrder(orderID)
+	order, err := h.PaymentStore.GetOrder(orderID)
 	if err != nil {
 		respondWithError(w, http.StatusNotFound, "Order not found")
 		return
@@ -186,7 +186,7 @@ func (h *Handlers) GetPaymentStatus(w http.ResponseWriter, r *http.Request) {
 			// Update our local status if it differs
 			stripeStatus := convertStripeStatus(string(pi.Status))
 			if stripeStatus != order.Payment.Status {
-				h.paymentStore.UpdatePaymentStatus(order.ID, stripeStatus)
+				h.PaymentStore.UpdatePaymentStatus(order.ID, stripeStatus)
 				order.Payment.Status = stripeStatus
 			}
 		}
@@ -212,7 +212,7 @@ func (h *Handlers) GetOrderDetails(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	order, err := h.paymentStore.GetOrder(orderID)
+	order, err := h.PaymentStore.GetOrder(orderID)
 	if err != nil {
 		respondWithError(w, http.StatusNotFound, "Order not found")
 		return
@@ -229,14 +229,14 @@ func (h *Handlers) TrackPayment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	order, err := h.paymentStore.GetOrderByTrackingID(trackingID)
+	order, err := h.PaymentStore.GetOrderByTrackingID(trackingID)
 	if err != nil {
 		respondWithError(w, http.StatusNotFound, "Order not found")
 		return
 	}
 
 	// Get payment events
-	events, _ := h.paymentStore.GetPaymentEvents(order.ID)
+	events, _ := h.PaymentStore.GetPaymentEvents(order.ID)
 
 	response := map[string]interface{}{
 		"order":  order,
@@ -254,7 +254,7 @@ func (h *Handlers) GetCustomerPayments(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orders, err := h.paymentStore.GetCustomerOrders(email)
+	orders, err := h.PaymentStore.GetCustomerOrders(email)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to retrieve customer orders")
 		return
@@ -287,7 +287,7 @@ func (h *Handlers) GetAllPayments(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	orders, err := h.paymentStore.GetAllOrders(limit, offset)
+	orders, err := h.PaymentStore.GetAllOrders(limit, offset)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to retrieve orders")
 		return
@@ -302,7 +302,7 @@ func (h *Handlers) GetAllPayments(w http.ResponseWriter, r *http.Request) {
 
 // GetPaymentStats retrieves payment statistics
 func (h *Handlers) GetPaymentStats(w http.ResponseWriter, r *http.Request) {
-	stats, err := h.paymentStore.GetPaymentStats()
+	stats, err := h.PaymentStore.GetPaymentStats()
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to retrieve payment stats")
 		return
@@ -320,7 +320,7 @@ func (h *Handlers) FulfillOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if order exists and is paid
-	order, err := h.paymentStore.GetOrder(orderID)
+	order, err := h.PaymentStore.GetOrder(orderID)
 	if err != nil {
 		respondWithError(w, http.StatusNotFound, "Order not found")
 		return
@@ -332,13 +332,13 @@ func (h *Handlers) FulfillOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update order status
-	if err := h.paymentStore.UpdateOrderStatus(orderID, models.OrderStatusFulfilled); err != nil {
+	if err := h.PaymentStore.UpdateOrderStatus(orderID, models.OrderStatusFulfilled); err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to fulfill order")
 		return
 	}
 
 	// Log fulfillment event
-	h.paymentStore.AddPaymentEvent(models.PaymentEvent{
+	h.PaymentStore.AddPaymentEvent(models.PaymentEvent{
 		OrderID:   orderID,
 		EventType: "order_fulfilled",
 		Status:    models.PaymentStatusSucceeded,
@@ -359,7 +359,7 @@ func (h *Handlers) RefundOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	order, err := h.paymentStore.GetOrder(orderID)
+	order, err := h.PaymentStore.GetOrder(orderID)
 	if err != nil {
 		respondWithError(w, http.StatusNotFound, "Order not found")
 		return
@@ -372,18 +372,18 @@ func (h *Handlers) RefundOrder(w http.ResponseWriter, r *http.Request) {
 
 	// Process refund with Stripe (implement based on your needs)
 	// For now, just update the status
-	if err := h.paymentStore.UpdateOrderStatus(orderID, models.OrderStatusRefunded); err != nil {
+	if err := h.PaymentStore.UpdateOrderStatus(orderID, models.OrderStatusRefunded); err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to process refund")
 		return
 	}
 
-	if err := h.paymentStore.UpdatePaymentStatus(orderID, models.PaymentStatusRefunded); err != nil {
+	if err := h.PaymentStore.UpdatePaymentStatus(orderID, models.PaymentStatusRefunded); err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to update payment status")
 		return
 	}
 
 	// Log refund event
-	h.paymentStore.AddPaymentEvent(models.PaymentEvent{
+	h.PaymentStore.AddPaymentEvent(models.PaymentEvent{
 		OrderID:   orderID,
 		EventType: "order_refunded",
 		Status:    models.PaymentStatusRefunded,
